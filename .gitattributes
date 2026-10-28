@@ -1,0 +1,3 @@
+# Keep the start scripts runnable on every OS, whatever core.autocrlf is set to
+*.sh  text eol=lf
+*.bat text eol=crlf

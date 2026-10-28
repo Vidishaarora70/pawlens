@@ -6,7 +6,7 @@ PawLens checks that a photo actually contains a pet, names the species, ranks 37
 and draws a Grad-CAM heatmap of where the model looked. When its models disagree, it says so.
 
 <p>
-  <img alt="Python" src="https://img.shields.io/badge/Python-3.10%E2%80%933.12-3776AB?style=flat-square&logo=python&logoColor=white&labelColor=1F2440">
+  <img alt="Python" src="https://img.shields.io/badge/Python-3.10%E2%80%933.13-3776AB?style=flat-square&logo=python&logoColor=white&labelColor=1F2440">
   <img alt="TensorFlow" src="https://img.shields.io/badge/TensorFlow-2.16%2B-FF6F00?style=flat-square&logo=tensorflow&logoColor=white&labelColor=1F2440">
   <img alt="FastAPI" src="https://img.shields.io/badge/FastAPI-0.110%2B-009688?style=flat-square&logo=fastapi&logoColor=white&labelColor=1F2440">
   <img alt="React" src="https://img.shields.io/badge/React-19-61DAFB?style=flat-square&logo=react&logoColor=61DAFB&labelColor=1F2440">
@@ -22,6 +22,7 @@ and draws a Grad-CAM heatmap of where the model looked. When its models disagree
   <a href="#how-it-works"><b>How it works</b></a> ·
   <a href="#train-the-models"><b>Training</b></a> ·
   <a href="#api"><b>API</b></a> ·
+  <a href="#deploy"><b>Deploy</b></a> ·
   <a href="#team"><b>Team</b></a>
 </p>
 
@@ -103,14 +104,14 @@ and draws a Grad-CAM heatmap of where the model looked. When its models disagree
 
 > **No training needed.** Without trained models, PawLens runs in **demo mode**: the ImageNet MobileNetV2 handles everything and breed names come from ImageNet's 118 dog and 5 cat classes. A banner says so, and every feature still works.
 
-**You need:** Python **3.10–3.12** and an internet connection on first start (TensorFlow fetches ~14 MB of ImageNet weights once).
+**You need:** 64-bit Python **3.10–3.13** and an internet connection on first start (TensorFlow fetches ~14 MB of ImageNet weights once).
 
 ```bash
 ./start.sh        # macOS / Linux
 start.bat         # Windows (or just double-click it)
 ```
 
-Then open **http://localhost:8000**. The first run creates a virtual environment and installs dependencies, which takes a few minutes.
+Then open **http://localhost:8000**. The first run creates `backend/.venv` and installs dependencies, which takes a few minutes. The script finds a Python that TensorFlow supports by itself (it skips Python 3.14+ and, on Windows, Anaconda) and rebuilds the environment if an earlier setup broke halfway.
 
 <details>
 <summary><b>Development mode with hot reload</b></summary>
@@ -121,7 +122,7 @@ Run the backend and frontend in two terminals:
 ```bash
 # 1. Backend: FastAPI on :8000
 cd backend
-python -m venv .venv
+python -m venv .venv            # Python 3.10–3.13; on Windows not Anaconda's
 .venv\Scripts\activate          # macOS/Linux: source .venv/bin/activate
 pip install -r requirements.txt
 uvicorn app.main:app --reload --port 8000
@@ -304,6 +305,24 @@ $env:PAWLENS_GATE_WEIGHTS="none"; $env:PAWLENS_GATE_THRESHOLD="0"; pytest -q
 
 <br>
 
+## Deploy
+
+PawLens ships as a single Docker image. The backend serves both the API and the web app, so one container is the whole deployment.
+
+```bash
+docker build -t pawlens .
+docker run -p 8000:8000 pawlens
+```
+
+Then open **http://localhost:8000**. The image builds the frontend from source, bakes in the ImageNet weights so it starts without internet access, runs as a non-root user, and reports its status to Docker through `/api/health`. It listens on `$PORT` (default `8000`), which Render, Railway and Google Cloud Run set for you, so the same image works there or on any server with Docker.
+
+- **Memory:** plan for 2–3 GB of RAM. TensorFlow is heavy: the server peaked at about 2.5 GB after Grad-CAM predictions and a stress test (measured on Windows; Linux usually needs less). Free tiers with 512 MB will run out of memory.
+- **HTTPS:** browsers only allow the live camera over HTTPS. Hosting platforms provide it; on your own server, put the container behind a reverse proxy such as Caddy or nginx.
+- **Trained models:** `.keras` files are git-ignored, so a platform that builds from GitHub runs in demo mode. To go live with your trained models, build the image on your machine with them in `backend/models/` and push it to a registry such as Docker Hub or GHCR.
+- **Feedback photos** are saved inside the container and disappear on redeploy. Mount a volume and point `PAWLENS_FEEDBACK_DIR` at it to keep them.
+
+<br>
+
 ## Project structure
 
 ```
@@ -319,7 +338,8 @@ pawlens/
 │   └── dist/                prebuilt UI, served by the backend
 ├── training/                Colab notebook + training and evaluation scripts
 ├── docs/                    build spec, project deck, README assets
-└── start.bat / start.sh     one-command start
+├── Dockerfile               one-image deploy: builds the UI, serves API + app
+└── start.bat / start.sh     one-command local start
 ```
 
 <details>
@@ -347,18 +367,11 @@ pawlens/
 <summary><b>Troubleshooting</b></summary>
 <br>
 
-**`start.bat` fails with “No matching distribution found for tensorflow”.** `py -3` picks your newest Python, and TensorFlow has no build for Python 3.13+ yet. Delete the half-made environment and recreate it with a supported version:
+**“PawLens needs 64-bit Python 3.10 to 3.13”.** No compatible Python was found. TensorFlow doesn't support Python 3.14 yet, and on Windows Anaconda's Python can't load TensorFlow inside a virtual environment. Install Python 3.12 from [python.org](https://www.python.org/downloads/) and run the start script again. You can keep your other Pythons installed; the script picks the right one.
 
-```bat
-cd backend
-rmdir /s /q .venv
-py -3.11 -m venv .venv
-.venv\Scripts\pip install -r requirements.txt
-```
+**`ImportError: DLL load failed while importing _pywrap_tensorflow_internal`.** You created `.venv` by hand from Anaconda's Python on Windows. Anaconda ships an older `msvcp140.dll` next to `python.exe`, and current TensorFlow builds fail to initialise against it. Delete `backend/.venv` and run `start.bat`, or recreate it with `py -3.12 -m venv .venv` from a python.org install.
 
-Running `start.bat` again then picks up the working `.venv`.
-
-**`ImportError: DLL load failed while importing _pywrap_tensorflow_internal` on Windows.** This usually means the virtual environment was created from **Anaconda's** Python. Anaconda ships an older `msvcp140.dll` next to `python.exe`, and current TensorFlow builds fail to initialise against it. Recreate `.venv` from a [python.org](https://www.python.org/downloads/) interpreter as shown above, or install TensorFlow with `conda` inside a conda environment instead.
+**Start over from scratch.** Delete `backend/.venv` and run the start script again.
 
 </details>
 
