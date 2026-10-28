@@ -1,0 +1,11 @@
+__pycache__/
+*.pyc
+.venv/
+node_modules/
+.pytest_cache/
+backend/models/*.keras
+backend/models/metrics/
+backend/feedback/*/
+backend/feedback/feedback_log.csv
+frontend/node_modules/.tmp/
+.DS_Store

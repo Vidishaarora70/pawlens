@@ -1,0 +1,87 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* ---------- Design tokens ---------- */
+:root {
+  --bg: #f7f7fb;
+  --surface: #ffffff;
+  --surface-2: #eeeff6;
+  --line: #e1e3ee;
+  --text: #14172b;
+  --muted: #5a5f7d;
+  --cat-ink: #6a2dbf;
+  --dog-ink: #b93f0c;
+  --gate-ink: #0e7c72;
+  --danger-ink: #c1121f;
+  color-scheme: light;
+}
+.dark {
+  --bg: #0f1222;
+  --surface: #171b31;
+  --surface-2: #1f2440;
+  --line: #2a3052;
+  --text: #ecedf5;
+  --muted: #a3a7c2;
+  --cat-ink: #cdaaf7;
+  --dog-ink: #ffa27c;
+  --gate-ink: #5fe0d3;
+  --danger-ink: #ff8a93;
+  color-scheme: dark;
+}
+
+@theme inline {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Bricolage Grotesque", "Inter", ui-sans-serif, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, monospace;
+
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-line: var(--line);
+  --color-ink: var(--text);
+  --color-muted: var(--muted);
+
+  --color-dog: #ff7a45;
+  --color-cat: #9b5de5;
+  --color-gate: #2ec4b6;
+  --color-danger: #e63946;
+  --color-dog-ink: var(--dog-ink);
+  --color-cat-ink: var(--cat-ink);
+  --color-gate-ink: var(--gate-ink);
+  --color-danger-ink: var(--danger-ink);
+  --color-night: #0f1222;
+}
+
+/* ---------- Base ---------- */
+html, body, #root { min-height: 100%; }
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+h1, h2, h3 { font-family: var(--font-display); letter-spacing: -0.02em; }
+::selection { background: #ff7a4555; }
+
+:focus-visible {
+  outline: 2px solid #ff7a45;
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
+.num { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+
+/* transparent range input that sits on top of the heatmap compare view */
+.compare-range { -webkit-appearance: none; appearance: none; background: transparent; cursor: ew-resize; }
+.compare-range::-webkit-slider-thumb { -webkit-appearance: none; width: 44px; height: 100%; background: transparent; }
+.compare-range::-moz-range-thumb { width: 44px; height: 100%; background: transparent; border: 0; }
+.compare-range:focus-visible + .compare-handle { box-shadow: 0 0 0 3px #ff7a45; }
+
+/* ordinary sliders */
+.slider { accent-color: #ff7a45; width: 100%; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+}
